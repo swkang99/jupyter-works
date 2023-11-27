@@ -186,3 +186,5 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks.ipynb_checkpoints
 */.ipynb_checkpoints/*
+fish_disease/examples/*
+fish_disease/weights/*

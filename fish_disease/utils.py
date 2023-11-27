@@ -406,8 +406,8 @@ def set_class_part(ann_org_dir):
                         cats['name'] = 'GILL' # 아가미
                         data['annotations'] = set_new_category_id(data['annotations'], cats['id'], id)
                         cats['id'] = id
-                    # else:
-                    #     data['annotations'] = remove_ann(data['annotations'], cats['id'])
+                    else:
+                        data['annotations'] = remove_ann(data['annotations'], cats['id'])
                         
                 elif 'liver' in ann_dir:
                     cats['supercategory'] = cats['name'][2:4]
