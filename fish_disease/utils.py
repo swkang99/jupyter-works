@@ -397,7 +397,6 @@ def set_class_part(ann_org_dir):
         
         
         for cats in data['categories']:
-            
             # if '11' in ann_dir or '12' in ann_dir:
                 if 'gill' in ann_dir:
                     cats['supercategory'] = cats['name'][2:4]

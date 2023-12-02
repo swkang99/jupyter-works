@@ -284,8 +284,8 @@ def get_box(data_img, data_ann, data_cls, data_dir):
                                  
             code = get_class(data_cls, ann['category_id'], 'code')
             
-            if code.find('OUY') != -1 or code.find('OUN') != -1: # 외형 라벨 제외
-                continue
+            if code.find('OUY') != -1 or code.find('OUN') != -1: # 외형 라벨
+                category = -1
             elif code not in class_code.keys():
                 print(code)
                 continue
@@ -302,15 +302,21 @@ def get_box(data_img, data_ann, data_cls, data_dir):
                 elif target_num == 7 or target_num == 8:
                     category = class_eyeless_45_90.index(code[2:])
             
-            cls_path = type_path + code[2:] + '/'
-            if not os.path.exists(cls_path):  
-                os.makedirs(cls_path)
-            label_path = cls_path + 'labels/'
+            # cls_path = type_path + code[2:] + '/'
+            # if not os.path.exists(cls_path):  
+            #     os.makedirs(cls_path)
+            # label_path = cls_path + 'labels/'
+            # if not os.path.exists(label_path):  
+            #     os.makedirs(label_path)
+            # image_path = cls_path + 'images/'
+            # if not os.path.exists(image_path):  
+            #     os.makedirs(image_path)     
+            label_path = type_path + 'labels/'
             if not os.path.exists(label_path):  
                 os.makedirs(label_path)
-            image_path = cls_path + 'images/'
+            image_path = type_path + 'images/'
             if not os.path.exists(image_path):  
-                os.makedirs(image_path)     
+                os.makedirs(image_path)  
                 
             size = get_image(data_img, ann['image_id'], 'size')
             yolo_bbox = coco_2_yolo(ann['bbox'], size)
