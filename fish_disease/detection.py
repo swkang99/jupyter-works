@@ -11,7 +11,6 @@ from segmentation import cvt_map
 from directory import root_dir_08, root_dir_09
 from tqdm import tqdm_notebook
 
-det_dir = root_dir_09 + 'object_detection/'
 # det_dir = "/media/lifeisbug/hdd/fish/fish_data/data_8+9/object_detection/"
 def bbox_with_img(img, bbox, cls, dir, maps=None):
     """ 이미지에 바운딩 박스, 폴리곤을 그림
@@ -193,7 +192,7 @@ def get_crop_region(bbox, img_w, img_h):
     x_max = int(x_max * img_w)
     y_max = int(y_max * img_h)
     
-    return x_min, y_min, x_max, y_max
+    return [x_min, y_min, x_max, y_max]
         
     
 def augment_pipeline(aug_type, image, bboxes, category_ids):
@@ -213,18 +212,34 @@ def augment_pipeline(aug_type, image, bboxes, category_ids):
         증강 적용 결과 transform
         
     """ 
+    print(bboxes)
+    
     if aug_type == "crop": # 물고기 bbox 크롭(crop)
         aug_type = "_crop"
         x_min, y_min, x_max, y_max = get_crop_region("""크롭영역=이미지외형바운딩박스""", img_width, img_height)
         transform = A.Compose(
             [A.Crop(x_min, y_min, x_max, y_max, p=1)],
-            bbox_params=A.BboxParams(format='yolo', label_fields=['category_ids']),
+            bbox_params=A.BboxParams(format='yolo', label_fields=['category_ids']), 
         )
-    
         
     # 증강 실행
     transformed = transform(image=image, bboxes=bboxes, category_ids=category_ids)
     return transformed
+
+
+def augment_crop(image, bboxes, category_ids, crop_region):
+    
+    x_min, y_min, x_max, y_max = crop_region
+    
+    transform = A.Compose(
+        [A.Crop(x_min, y_min, x_max, y_max, p=1)],
+        bbox_params=A.BboxParams(format='yolo', label_fields=['category_ids']),
+    )
+        
+    # 증강 실행
+    transformed = transform(image=image, bboxes=bboxes, category_ids=category_ids)
+    return transformed
+    
     
 def get_box(data_img, data_ann, data_cls, data_dir):  
     """ 데이터셋에서 바운딩 박스를 가져와 변환 및 저장
@@ -238,8 +253,9 @@ def get_box(data_img, data_ann, data_cls, data_dir):
     Returns:
         
     """ 
-    target_num_list = [1, 2, 3, 6, 7, 8]
-    pbar = tqdm_notebook(total=None, desc=f"get_box")
+    # target_num_list = [1, 2, 3, 6, 7, 8]
+    target_num_list = [2, 3, 7, 8] # 0도 이미지 제외
+    pbar = tqdm_notebook(total=None, desc="get_box")
     
     for target_num in target_num_list:
         if target_num == 1:
@@ -253,11 +269,19 @@ def get_box(data_img, data_ann, data_cls, data_dir):
         
         elif target_num == 7 or target_num == 8:
             label_type = 'eyeless_45_90'
-    
+            
+        base_path, _ = os.path.split(data_dir)
+        det_dir = os.path.join(base_path, "object_detection")
+        print(det_dir)
         type_path = det_dir + label_type + '/'
-        # label_path = type_path + 'labels/'
-        # if not os.path.exists(label_path):  
-        #     os.makedirs(label_path)
+        
+        label_path = type_path + 'labels/'
+        if not os.path.exists(label_path):  
+            os.makedirs(label_path)
+            
+        image_path = type_path + 'images/'
+        if not os.path.exists(image_path):  
+            os.makedirs(image_path)  
             
         # if target_num == 1 or target_num == 6:
         #     set_classes(type_path, class_side_0)
@@ -266,32 +290,25 @@ def get_box(data_img, data_ann, data_cls, data_dir):
         # elif target_num == 7 or target_num == 8:
         #     set_classes(type_path, class_eyeless_45_90)
         
-        # image_path = type_path + 'images/'
-        # if not os.path.exists(image_path):  
-        #     os.makedirs(image_path)    
-        
         for ann in data_ann:
             
-            
-            # 1. 외형을 제외한 라벨 모두 저장
             img_name = get_image(data_img, ann['image_id'], 'file_name')
-            if img_name.split('.')[-1] == 'JPEG':
-                if target_num != int(img_name[-6]):
-                    continue
-            else:
-                if target_num != int(img_name[-5]):
-                    continue
+            split_temp = img_name.split('_')[1]
+            img_num = int(split_temp.split('.')[0].lstrip('0'))
+            
+            if target_num != img_num:
+                continue
                                  
             code = get_class(data_cls, ann['category_id'], 'code')
             
-            if code.find('OUY') != -1 or code.find('OUN') != -1: # 외형 라벨
+            if code[:2] == 'PO': # 정상 라벨 제외
+                continue
+            elif code.find('OUY') != -1: #or code.find('OUN') != -1: # 외형 라벨, 크롭 기준
                 category = -1
             elif code not in class_code.keys():
                 print(code)
                 continue
-            elif code[:2] == 'PO': # 정상 라벨 제외
-                continue
-            elif code[2:] not in class_eye_45_90:
+            elif code[2:] not in class_eye_45_90 or code[2:] not in class_eyeless_45_90:
                 continue
             else:
                 if target_num == 1 or target_num == 6:
@@ -311,12 +328,8 @@ def get_box(data_img, data_ann, data_cls, data_dir):
             # image_path = cls_path + 'images/'
             # if not os.path.exists(image_path):  
             #     os.makedirs(image_path)     
-            label_path = type_path + 'labels/'
-            if not os.path.exists(label_path):  
-                os.makedirs(label_path)
-            image_path = type_path + 'images/'
-            if not os.path.exists(image_path):  
-                os.makedirs(image_path)  
+            
+            
                 
             size = get_image(data_img, ann['image_id'], 'size')
             yolo_bbox = coco_2_yolo(ann['bbox'], size)
@@ -331,9 +344,16 @@ def get_box(data_img, data_ann, data_cls, data_dir):
             # print(content)
             
             # .txt로 라벨 저장
-            with open(label_path + img_name[:-4] + ".txt", 'a') as f:
+            txt_path = label_path + img_name.split('.')[0] + ".txt"
+            if ".." in txt_path:
+                txt_path = txt_path.replace("..", ".")
+
+            with open(txt_path, 'a') as f:
                 f.write(content)
             
+            if img_name.lower().endswith(".jpeg"):
+                img_name = img_name.split('.')[0] + '.JPG'
+                
             # 학습에 사용할 이미지 복사
             shutil.copy(data_dir + img_name, image_path + img_name)
             
@@ -343,7 +363,17 @@ def get_box(data_img, data_ann, data_cls, data_dir):
 #             if labels:
 #                 save_yolo_bbox()
 
-            pbar.update(1)
+        # 외형 박스 추출 과정에서 생성된 외부 질병이 없는 데이터를 삭제(임시)
+        for im in os.listdir(image_path):
+            with open(label_path + im.split('.')[0] + '.txt', 'r') as file:
+                file_contents = file.read().strip()
+                lines = file_contents.split('\n')
+                if len(lines) == 1 and lines[0].startswith("-1"):
+                    # print(label_path + im.split('.')[0] + '.txt')
+                    os.remove(image_path + im)
+                    os.remove(label_path + im.split('.')[0] + '.txt')
+                    
+        pbar.update(1)
         
     pbar.close()
     
@@ -421,18 +451,27 @@ def augmentation(dir):
     """ 증강 실행
     
     Args:
-        dir: 증강할 데이터의 디렉터리
+        dir: 증강할 데이터의 디렉터리(상위 디렉터리)
+        
     Returns:
     
     """
     img_dir = dir + 'images/'
     label_dir = dir + 'labels/'
     
-    # 라벨 폴더 읽어오기
     label_file_list = os.listdir(label_dir)
-
-    # 이미지 폴더 읽어오기
     img_file_list = os.listdir(img_dir)
+    
+    aug_type = "crop"
+    
+    img_save_path = dir + aug_type + "/images/"
+    label_save_path = dir + aug_type + "/labels/"
+        
+    if not os.path.exists(img_save_path):  
+        os.makedirs(img_save_path)
+    if not os.path.exists(label_save_path):  
+        os.makedirs(label_save_path)
+            
     
     for img in img_file_list:
         image = cv2.imread(img_dir + img, cv2.IMREAD_UNCHANGED)
@@ -442,10 +481,10 @@ def augmentation(dir):
         bboxes = []
         
         # 라벨 txt 파일 내용 "2차원 리스트로" 읽어오기
-        with open(label_dir + img[:-4] + ".txt", 'r') as f: 
+        with open(label_dir + img.split(".")[0] + ".txt", 'r') as f: 
             bbox = []
             category_ids = []
-        
+            crop_region = []
             while True:
                 line = f.readline()
             
@@ -455,32 +494,35 @@ def augmentation(dir):
                     line.replace('\n', '')
                 
                 data = line.split(" ")
-                category_ids.append(int(data[0]))
-                del data[0]
-            
-                for d in data:
-                    bbox.append(float(d))
                 
-                bboxes.append(bbox) 
+                if '-1' in data: # 외형 바운딩박스일 때
+                    for d in data[1:]:
+                        bbox.append(float(d))
+                       
+                    crop_region = get_crop_region(bbox, img_width, img_height)
+                    
+                else:
+                
+                    category_ids.append(int(data[0]))
+                    for d in data[1:]:
+                        bbox.append(float(d))
+                
+                    bboxes.append(bbox) 
+                    
                 bbox = []
                 
-        print(img, " -> ", bboxes, " ", category_ids)     
+                
+        # print(img, " -> ", bboxes, " : ", category_ids)     
+        
+        if bboxes:
+            transformed = augment_crop(image, bboxes, category_ids, crop_region)
     
-#     transformed = augment_pipeline("crop", image, bboxes, category_ids)
+        cv2.imwrite(img_save_path + img[:-4] + ".jpg", transformed["image"])
     
-#     img_save_path = root_dir + "valid/images/"
-#     label_save_path = root_dir + "valid/labels/"
-    
-#     # 증강된 이미지 저장
-#     cv2.imwrite(img_save_path + img[:-4] + aug_type + ".jpg", transformed["image"])
-    
-#     # 증강된 바운딩 박스 라벨로 저장
-#     q = open(label_save_path + img[:-4] + aug_type + ".txt", 'w')
-#     q.close()
-#     with open(label_save_path + img[:-4] + aug_type + ".txt", 'a') as fi:
-#         for i in range(len(transformed["bboxes"])):
-#             fi.write(str(category_ids[i]) + " ")
-#             fi.write(str(transformed["bboxes"][i][0]) + " ")
-#             fi.write(str(transformed["bboxes"][i][1]) + " ")
-#             fi.write(str(transformed["bboxes"][i][2]) + " ")
-#             fi.write(str(transformed["bboxes"][i][3]) + "\n")
+        with open(label_save_path + img[:-4] + ".txt", 'a') as fi:
+            for i in range(len(transformed["bboxes"])):
+                fi.write(str(category_ids[i]) + " ")
+                fi.write(str(transformed["bboxes"][i][0]) + " ")
+                fi.write(str(transformed["bboxes"][i][1]) + " ")
+                fi.write(str(transformed["bboxes"][i][2]) + " ")
+                fi.write(str(transformed["bboxes"][i][3]) + "\n")

@@ -37,7 +37,7 @@ import shutil
     
     
 
-"""플렉싱크에서 3월에 업로드한 라벨링 데이터에 대한 코드: 임시 사용 중"""
+"""플렉싱크에서 3월에 업로드한 라벨링 데이터에 대한 코드: 사용하지 않음"""
 # data_03_train = dict()
 # with open(root_dir_03 + "train/_annotations.coco.json", 'r', encoding='utf-8') as f:
 #         data = json.load(f)
