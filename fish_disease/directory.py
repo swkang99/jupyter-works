@@ -1,14 +1,16 @@
+import os
+import json
+import shutil
+
 """데이터셋의 최상위 폴더 경로"""
 root_dir = "/media/lifeisbug/hdd/fish/fish_data/"
 # root_dir_03 = "/home/lifeisbug/Downloads/ASD0327.v1i.coco/"  # 3월 데이터셋   
 # root_dir_05 = root_dir + "flexink_05/"  # 5월 데이터셋
 # root_dir_07 = "/home/lifeisbug/Downloads/flexink_07/"  # 7월 데이터셋
 root_dir_08 = root_dir + "flexink_08/"  # 8월 데이터셋
-root_dir_09 = root_dir + "20230908/"  # 9월 데이터셋
+root_dir_09 = root_dir + "flexink_09/"  # 9월 데이터셋
 
-import os
-import json
-import shutil
+
 
 # data_08
 # data_09
@@ -196,7 +198,7 @@ for ann in os.listdir(ann_dir_08):
             data = json.load(f)
             data_08[ann[:2]] = data
 
-data_08['directory'] = img_dir_08
+data_08['directory'] = root_dir_08
 
 
 """플렉싱크에서 9월에 업로드한 라벨링 데이터에 대한 코드"""
@@ -211,7 +213,7 @@ for ann in os.listdir(ann_dir_09):
             data = json.load(f)
             data_09[ann[:2]] = data
 
-data_09['directory'] = img_dir_09
+data_09['directory'] = root_dir_09
 
 
 """관련 함수"""

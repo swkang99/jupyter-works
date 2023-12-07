@@ -255,7 +255,7 @@ def get_box(data_img, data_ann, data_cls, data_dir):
     """ 
     # target_num_list = [1, 2, 3, 6, 7, 8]
     target_num_list = [2, 3, 7, 8] # 0도 이미지 제외
-    pbar = tqdm_notebook(total=None, desc="get_box")
+    pbar = tqdm_notebook(total=None, desc=f"get_box: {data_dir}")
     
     for target_num in target_num_list:
         if target_num == 1:
@@ -269,17 +269,15 @@ def get_box(data_img, data_ann, data_cls, data_dir):
         
         elif target_num == 7 or target_num == 8:
             label_type = 'eyeless_45_90'
-            
-        base_path, _ = os.path.split(data_dir)
-        det_dir = os.path.join(base_path, "object_detection")
-        print(det_dir)
-        type_path = det_dir + label_type + '/'
         
-        label_path = type_path + 'labels/'
+        det_dir = os.path.join(data_dir, "object_detection")
+        type_path = os.path.join(det_dir, label_type)
+        
+        label_path = os.path.join(type_path, 'labels')
         if not os.path.exists(label_path):  
             os.makedirs(label_path)
             
-        image_path = type_path + 'images/'
+        image_path = os.path.join(type_path, 'images')
         if not os.path.exists(image_path):  
             os.makedirs(image_path)  
             
@@ -344,7 +342,8 @@ def get_box(data_img, data_ann, data_cls, data_dir):
             # print(content)
             
             # .txt로 라벨 저장
-            txt_path = label_path + img_name.split('.')[0] + ".txt"
+            
+            txt_path = os.path.join(label_path, img_name.split('.')[0] + ".txt")
             if ".." in txt_path:
                 txt_path = txt_path.replace("..", ".")
 
@@ -355,7 +354,9 @@ def get_box(data_img, data_ann, data_cls, data_dir):
                 img_name = img_name.split('.')[0] + '.JPG'
                 
             # 학습에 사용할 이미지 복사
-            shutil.copy(data_dir + img_name, image_path + img_name)
+            source_path = os.path.join(data_dir, "01_image", img_name)
+            target_path = os.path.join(image_path, img_name)
+            shutil.copy(source_path, target_path)
             
             # 2. 이미지와 yolo 라벨을 증강 파이프라인에 통과시켜 저장
 #             labels = set_boxes(img['file_name'], data_img, data_ann, data_cls)
@@ -365,14 +366,18 @@ def get_box(data_img, data_ann, data_cls, data_dir):
 
         # 외형 박스 추출 과정에서 생성된 외부 질병이 없는 데이터를 삭제(임시)
         for im in os.listdir(image_path):
-            with open(label_path + im.split('.')[0] + '.txt', 'r') as file:
+            txt_file = os.path.join(label_path, im.split('.')[0] + '.txt')
+            with open(txt_file, 'r') as file:
                 file_contents = file.read().strip()
                 lines = file_contents.split('\n')
                 if len(lines) == 1 and lines[0].startswith("-1"):
                     # print(label_path + im.split('.')[0] + '.txt')
-                    os.remove(image_path + im)
-                    os.remove(label_path + im.split('.')[0] + '.txt')
-                    
+                    rm_img_file = os.path.join(image_path, im)
+                    rm_txt_file = os.path.join(label_path, im.split('.')[0] + '.txt')
+                    os.remove(rm_img_file)
+                    os.remove(rm_txt_file)
+          
+        print(target_num)
         pbar.update(1)
         
     pbar.close()
